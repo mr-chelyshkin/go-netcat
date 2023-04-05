@@ -85,6 +85,9 @@ func (nc *netcat) RunHandler(handler ncHandler) error {
 		nc.logger.Println(fmt.Sprintf("New conn from '%s'", conn.RemoteAddr()))
 		go func() {
 			w := &ncHandlerWrapper{handler: handler}
+			//TODO: wrap as function, not struct.
+			//TODO: err wraper is incorrect.
+			//TODO: client exit log.
 			errCh <- w.run(conn, nc.logger)
 			//errCh <- nc.wrapper.run(conn, nc.logger)
 			//errCh <- handler.Handle(conn, nc.logger)
