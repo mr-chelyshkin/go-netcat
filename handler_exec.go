@@ -1,6 +1,7 @@
 package go_netcat
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net"
@@ -25,17 +26,12 @@ func (h *handlerExec) Handle(conn net.Conn, _ ncLogger) error {
 	h.cmd.Stdin = conn
 	h.cmd.Stdout = wp
 
-	var errCh = make(chan error)
-
 	go func() {
-		_, err := io.Copy(conn, rp)
-		if err != nil {
-			errCh <- err
-		}
-		errCh <- fmt.Errorf("FFFFFFFF")
+		_, _ = io.Copy(conn, rp)
 	}()
 	if err := h.cmd.Run(); err != nil {
-		return err
+		_, _ = io.Copy(conn, bytes.NewReader([]byte(err.Error())))
+		fmt.Println(err.Error())
 	}
 	defer func() {
 		conn.Close()

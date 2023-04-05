@@ -12,37 +12,18 @@ var (
 )
 
 type ncHandler interface {
-	Handle(conn net.Conn, logger ncLogger) error
+	Handle(conn net.Conn, logger ncLogger)
 }
 
 type ncLogger interface {
 	Println(v ...any)
 }
 
-type ncHandlerWrapper struct {
-	handler ncHandler
-}
-
-func (nc *ncHandlerWrapper) run(conn net.Conn, logger ncLogger) error {
-	var errCh = make(chan error)
-	go func(c net.Conn, l ncLogger, e chan error) {
-		e <- nc.handler.Handle(c, l)
-	}(conn, logger, errCh)
-
-	for {
-		select {
-		case e := <-errCh:
-			return e
-		}
-	}
-}
-
 type netcat struct {
 	addr     string
 	deadline uint64
 
-	logger  ncLogger
-	wrapper ncHandlerWrapper
+	logger ncLogger
 }
 
 // NewNetcat create netcat object.
@@ -70,7 +51,6 @@ func (nc *netcat) RunHandler(handler ncHandler) error {
 	nc.logger.Println(fmt.Sprintf("Listening on '%s'", nc.addr))
 	nc.logger.Println(fmt.Sprintf("Set conn deadline: %dsec", nc.deadline))
 
-	var errCh = make(chan error)
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
@@ -83,19 +63,6 @@ func (nc *netcat) RunHandler(handler ncHandler) error {
 		}
 
 		nc.logger.Println(fmt.Sprintf("New conn from '%s'", conn.RemoteAddr()))
-		go func() {
-			w := &ncHandlerWrapper{handler: handler}
-			//TODO: wrap as function, not struct.
-			//TODO: err wraper is incorrect.
-			//TODO: client exit log.
-			errCh <- w.run(conn, nc.logger)
-			//errCh <- nc.wrapper.run(conn, nc.logger)
-			//errCh <- handler.Handle(conn, nc.logger)
-		}()
-
-		select {
-		case e := <-errCh:
-			nc.logger.Println(e)
-		}
+		go handler.Handle(conn, nc.logger)
 	}
 }
