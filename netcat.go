@@ -12,7 +12,7 @@ var (
 )
 
 type ncHandler interface {
-	Handle(conn net.Conn, logger ncLogger)
+	Handle(conn net.Conn)
 }
 
 type ncLogger interface {
@@ -63,6 +63,8 @@ func (nc *netcat) RunHandler(handler ncHandler) error {
 		}
 
 		nc.logger.Println(fmt.Sprintf("New conn from '%s'", conn.RemoteAddr()))
-		go handler.Handle(conn, nc.logger)
+		go func() {
+			handler.Handle(conn)
+		}()
 	}
 }
